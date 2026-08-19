@@ -1,6 +1,13 @@
 const std = @import("std");
 const Uri = std.Uri;
 
+fn isEncodeUriComponentUnescaped(byte: u8) bool {
+}
+
+fn shouldPreserverEscape(byte: u8, preservationBytes: []const u8) bool {
+    return std.mem.findScalar(u8, byte, preservationBytes) != null;
+}
+
 /// It escapes all characters except the following
 /// A-Z a-z 0-9 - _ . ! ~ * ' ( )
 // pub fn encodeURIComponentAlloc(allocator: std.mem.Allocator, uriComponent: []u8) void {}
