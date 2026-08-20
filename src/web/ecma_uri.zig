@@ -1,16 +1,26 @@
 const std = @import("std");
 const Uri = std.Uri;
 
-fn isEncodeUriComponentUnescaped(byte: u8) bool {
-}
-
-fn shouldPreserverEscape(byte: u8, preservationBytes: []const u8) bool {
-    return std.mem.findScalar(u8, byte, preservationBytes) != null;
-}
+const testing = std.testing;
 
 /// It escapes all characters except the following
 /// A-Z a-z 0-9 - _ . ! ~ * ' ( )
-// pub fn encodeURIComponentAlloc(allocator: std.mem.Allocator, uriComponent: []u8) void {}
+pub fn encodeURIComponentAlloc(allocator: std.mem.Allocator, uriComponent: []u8) ![]u8 {
+    var output: std.Io.Writer.Allocating = .init(allocator);
+    defer output.deinit();
+
+    try Encode(&output.writer, uriComponent, isEncodeUriComponentUnescaped);
+
+    return try output.toOwnedSlice();
+}
+
+fn isEncodeUriComponentUnescaped(byte: u8) bool {
+    return std.ascii.isAlphanumeric(byte) or switch (byte) {
+        '-', '_', '.', '!', '~', '*', '\'', '(', ')',
+        => true,
+        else => false,
+    };
+}
 
 /// This is used to encode a URL as a whole, assuming it is already well-formed
 ///
@@ -27,12 +37,10 @@ pub fn encodeURIAlloc(allocator: std.mem.Allocator, string: []const u8) ![]u8 {
     var output: std.Io.Writer.Allocating = .init(allocator);
     defer output.deinit();
 
-    try encodeUri(&output.writer, string);
+    try Encode(&output.writer, string, isEncodeUriUnescaped);
 
     return try output.toOwnedSlice();
 }
-
-pub const EncodeUriError = std.Io.Writer.Error || error{InvalidUtf8};
 
 fn isEncodeUriUnescaped(byte: u8) bool {
     return std.ascii.isAlphanumeric(byte) or switch (byte) {
@@ -43,16 +51,15 @@ fn isEncodeUriUnescaped(byte: u8) bool {
     };
 }
 
+pub const EncodeError = std.Io.Writer.Error || error{InvalidUtf8};
 
-fn encodeUri(writer: *std.Io.Writer, string: []const u8) EncodeUriError!void {
+fn Encode(writer: *std.Io.Writer, string: []const u8, isValidChar: fn (u8) bool) EncodeError!void {
     if (!std.unicode.utf8ValidateSlice(string)) {
         return error.InvalidUtf8;
     }
 
-    try std.Uri.Component.percentEncode(writer, string, isEncodeUriUnescaped);
+    try std.Uri.Component.percentEncode(writer, string, isValidChar);
 }
-
-const testing = std.testing;
 
 test "encodeURIAlloc" {
     const expected = try encodeURIAlloc(testing.allocator, "https://example.com/?choice=Ben & Jerry's");
