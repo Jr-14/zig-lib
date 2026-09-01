@@ -93,40 +93,50 @@ pub const DecodeError = std.Io.Writer.Error || error{ URIError, InvalidUtf8 };
 
 /// https://tc39.es/ecma262/multipage/global-object.html#sec-decode
 fn Decode(writer: *std.Io.Writer, string: []const u8, preserveEscapeSet: fn(u8) bool) DecodeError!void {
-    const length = string.len;
     var k = 0;
     while (k < string.len) {
         const codeUnit = string[k];
-        if (codeUnit == '%') {
-            if ((k + 3) > string.len) return error.URIError;
-            const firstOctet = parseHexOctet(string[k..k+3], 1) catch return error.URIError;
-            k += 2;
-            const n: usize = std.unicode.utf8ByteSequenceLength(firstOctet) catch return error.URIError;
-            if (n == 0) {
-                if (!std.ascii.isAscii(firstOctet)) return error.URIError;
-                try std.Uri.Component.percentEncode(writer, string, preserveEscapeSet);
-            } else {
-                var octets: [4]u8 = undefined;
-                octets[0] = firstOctet;
-
-                var j: usize = 1;
-                while (j < n) : (j += 1) {
-                    k += 1;
-
-                    if (k + 3 > length or string[k] != '%') {
-                        return error.URIError;
-                    }
-
-                    const continuationByte = parseHexOctet(string, k + 1) catch return error.URIError;
-                    octets[j] = continuationByte;
-                    k += 2;
-                }
-                const encoded = octets[0..n];
-                if (!std.unicode.utf8ValidateSlice(encoded)) return error.URIError;
-
-                try writer.writeAll(encoded);
-            }
+        if (codeUnit != '%') {
+            try writer.writeByte(codeUnit);
+            k += 1;
+            continue;
         }
+
+        if ((k + 3) > string.len) return error.URIError;
+        
+        const escape = string[k..k+3];
+        const firstOctet = parseHexOctet(string, k+1) catch return error.URIError;
+        const n: usize = std.unicode.utf8ByteSequenceLength(firstOctet) catch return error.URIError;
+
+        k += 2;
+
+        if (n == 1) {
+            if (preserveEscapeSet(firstOctet)) {
+                try writer.writeAll(escape);
+            } else {
+                try writer.writeByte(firstOctet);
+            }
+        } else {
+            var octets: [4]u8 = undefined;
+            octets[0] = firstOctet;
+
+            var j: usize = 1;
+            while (j < n) : (j += 1) {
+                k += 1;
+                if (k + 3 > string.len or string[k] != '%') {
+                    return error.URIError;
+                }
+
+                const continuationByte = parseHexOctet(string, k + 1) catch return error.URIError;
+                octets[j] = continuationByte;
+                k += 2;
+            }
+            const encoded = octets[0..n];
+            if (!std.unicode.utf8ValidateSlice(encoded)) return error.URIError;
+
+            try writer.writeAll(encoded);
+        }
+
         k += 1;
     }
 }
