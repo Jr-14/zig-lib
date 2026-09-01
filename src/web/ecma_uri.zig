@@ -51,8 +51,9 @@ fn isEncodeUriUnescaped(byte: u8) bool {
     };
 }
 
-pub const EncodeError = std.Io.Writer.Error || error{InvalidUtf8};
+pub const EncodeError = std.Io.Writer.Error || error{ InvalidUtf8 };
 
+/// https://tc39.es/ecma262/multipage/global-object.html#sec-decode
 fn Encode(writer: *std.Io.Writer, string: []const u8, isValidChar: fn (u8) bool) EncodeError!void {
     if (!std.unicode.utf8ValidateSlice(string)) {
         return error.InvalidUtf8;
@@ -67,3 +68,66 @@ test "encodeURIAlloc" {
 
     try testing.expectEqualSlices(u8, expected, "https://example.com/?choice=Ben%20&%20Jerry's");
 }
+
+/// https://tc39.es/ecma262/multipage/global-object.html#sec-parsehexoctet
+/// The original implemenatation returns either a non-negative interger or a non-empty List of SyntaxError. But for our
+/// usecase, it looks like the tha non-empty List of SyntaxError is not used for Decode(). Here we should just return
+/// a `null` so that we can handle this case.
+fn parseHexOctet(string: []const u8, position: usize) error{InvalidHexOctet}!u8 {
+    std.debug.assert(string.len <= position + 2);
+
+    const hexDigits = string[position..][0..2];
+    return std.fmt.parseUnsigned(u8, hexDigits, 16) catch error.InvalidHexOctet;
+}
+
+fn decodeURIAlloc(allocator: std.mem.Allocator, string: []const u8) ![]u8 {
+    var output: std.Io.Writer.Allocating = .init(allocator);
+    defer output.deinit();
+
+    try Decode(&output.writer, string, isEncodeUriUnescaped);
+
+    return try output.toOwnedSlice();
+}
+
+pub const DecodeError = std.Io.Writer.Error || error{ URIError, InvalidUtf8 };
+
+/// https://tc39.es/ecma262/multipage/global-object.html#sec-decode
+fn Decode(writer: *std.Io.Writer, string: []const u8, preserveEscapeSet: fn(u8) bool) DecodeError!void {
+    const length = string.len;
+    var k = 0;
+    while (k < string.len) {
+        const codeUnit = string[k];
+        if (codeUnit == '%') {
+            if ((k + 3) > string.len) return error.URIError;
+            const firstOctet = parseHexOctet(string[k..k+3], 1) catch return error.URIError;
+            k += 2;
+            const n: usize = std.unicode.utf8ByteSequenceLength(firstOctet) catch return error.URIError;
+            if (n == 0) {
+                if (!std.ascii.isAscii(firstOctet)) return error.URIError;
+                try std.Uri.Component.percentEncode(writer, string, preserveEscapeSet);
+            } else {
+                var octets: [4]u8 = undefined;
+                octets[0] = firstOctet;
+
+                var j: usize = 1;
+                while (j < n) : (j += 1) {
+                    k += 1;
+
+                    if (k + 3 > length or string[k] != '%') {
+                        return error.URIError;
+                    }
+
+                    const continuationByte = parseHexOctet(string, k + 1) catch return error.URIError;
+                    octets[j] = continuationByte;
+                    k += 2;
+                }
+                const encoded = octets[0..n];
+                if (!std.unicode.utf8ValidateSlice(encoded)) return error.URIError;
+
+                try writer.writeAll(encoded);
+            }
+        }
+        k += 1;
+    }
+}
+
