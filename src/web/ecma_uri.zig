@@ -74,17 +74,25 @@ test "encodeURIAlloc" {
 /// usecase, it looks like the tha non-empty List of SyntaxError is not used for Decode(). Here we should just return
 /// a `null` so that we can handle this case.
 fn parseHexOctet(string: []const u8, position: usize) error{InvalidHexOctet}!u8 {
-    std.debug.assert(string.len <= position + 2);
+    std.debug.assert(position + 2 <= string.len);
 
-    const hexDigits = string[position..][0..2];
-    return std.fmt.parseUnsigned(u8, hexDigits, 16) catch error.InvalidHexOctet;
+    const high = std.fmt.charToDigit(string[position], 16) catch return error.InvalidHexOctet;
+    const low = std.fmt.charToDigit(string[position + 1], 16) catch return error.InvalidHexOctet;
+    return (high << 4) | low;
 }
 
-fn decodeURIAlloc(allocator: std.mem.Allocator, string: []const u8) ![]u8 {
+fn isDecodeUriPreserved(char: u8) bool {
+    return switch (char) {
+        ';', '/', '?', ':', '@', '&', '=', '+', '$', ',', '#' => true,
+        else => false,
+    };
+}
+
+pub fn decodeURIAlloc(allocator: std.mem.Allocator, string: []const u8) ![]u8 {
     var output: std.Io.Writer.Allocating = .init(allocator);
     defer output.deinit();
 
-    try Decode(&output.writer, string, isEncodeUriUnescaped);
+    try Decode(&output.writer, string, isDecodeUriPreserved);
 
     return try output.toOwnedSlice();
 }
@@ -93,6 +101,8 @@ pub const DecodeError = std.Io.Writer.Error || error{ URIError, InvalidUtf8 };
 
 /// https://tc39.es/ecma262/multipage/global-object.html#sec-decode
 fn Decode(writer: *std.Io.Writer, string: []const u8, preserveEscapeSet: fn(u8) bool) DecodeError!void {
+    if (!std.unicode.utf8ValidateSlice(string)) return error.InvalidUtf8;
+
     var k = 0;
     while (k < string.len) {
         const codeUnit = string[k];
@@ -103,7 +113,7 @@ fn Decode(writer: *std.Io.Writer, string: []const u8, preserveEscapeSet: fn(u8) 
         }
 
         if ((k + 3) > string.len) return error.URIError;
-        
+
         const escape = string[k..k+3];
         const firstOctet = parseHexOctet(string, k+1) catch return error.URIError;
         const n: usize = std.unicode.utf8ByteSequenceLength(firstOctet) catch return error.URIError;
