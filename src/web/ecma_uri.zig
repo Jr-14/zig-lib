@@ -16,8 +16,7 @@ pub fn encodeURIComponentAlloc(allocator: std.mem.Allocator, uriComponent: []u8)
 
 fn isEncodeUriComponentUnescaped(byte: u8) bool {
     return std.ascii.isAlphanumeric(byte) or switch (byte) {
-        '-', '_', '.', '!', '~', '*', '\'', '(', ')',
-        => true,
+        '-', '_', '.', '!', '~', '*', '\'', '(', ')', => true,
         else => false,
     };
 }
@@ -51,7 +50,7 @@ fn isEncodeUriUnescaped(byte: u8) bool {
     };
 }
 
-pub const EncodeError = std.Io.Writer.Error || error{ InvalidUtf8 };
+pub const EncodeError = std.Io.Writer.Error || error{InvalidUtf8};
 
 /// https://tc39.es/ecma262/multipage/global-object.html#sec-decode
 fn Encode(writer: *std.Io.Writer, string: []const u8, isValidChar: fn (u8) bool) EncodeError!void {
@@ -100,10 +99,10 @@ pub fn decodeURIAlloc(allocator: std.mem.Allocator, string: []const u8) ![]u8 {
 pub const DecodeError = std.Io.Writer.Error || error{ URIError, InvalidUtf8 };
 
 /// https://tc39.es/ecma262/multipage/global-object.html#sec-decode
-fn Decode(writer: *std.Io.Writer, string: []const u8, preserveEscapeSet: fn(u8) bool) DecodeError!void {
+fn Decode(writer: *std.Io.Writer, string: []const u8, preserveEscapeSet: fn (u8) bool) DecodeError!void {
     if (!std.unicode.utf8ValidateSlice(string)) return error.InvalidUtf8;
 
-    var k = 0;
+    var k: usize = 0;
     while (k < string.len) {
         const codeUnit = string[k];
         if (codeUnit != '%') {
@@ -114,8 +113,8 @@ fn Decode(writer: *std.Io.Writer, string: []const u8, preserveEscapeSet: fn(u8) 
 
         if ((k + 3) > string.len) return error.URIError;
 
-        const escape = string[k..k+3];
-        const firstOctet = parseHexOctet(string, k+1) catch return error.URIError;
+        const escape = string[k .. k + 3];
+        const firstOctet = parseHexOctet(string, k + 1) catch return error.URIError;
         const n: usize = std.unicode.utf8ByteSequenceLength(firstOctet) catch return error.URIError;
 
         k += 2;
@@ -151,3 +150,41 @@ fn Decode(writer: *std.Io.Writer, string: []const u8, preserveEscapeSet: fn(u8) 
     }
 }
 
+// Adapted from Test262:
+// test/built-ins/decodeURI/S15.1.3.1_A1.10_T1.js
+// Copyright 2009 the Sputnik authors. All rights reserved.
+// Licensed under the Test262 BSD license; see LICENSES/Test262.txt.
+test "decodeURIAlloc: invalid hex digits after a two-byte UTF-8 prefix" {
+    const intervals = [_][2]u21{
+        .{ 0x00, 0x2F },
+        .{ 0x3A, 0x40 },
+        .{ 0x47, 0x60 },
+        .{ 0x67, 0xFFFF },
+    };
+
+    for (intervals) |interval| {
+        var code_point = interval[0];
+        while (code_point <= interval[1]) : (code_point += 1) {
+            // Test262 iterates UTF-16 code units, including lone surrogates.
+            // They have no valid UTF-8 representation, so they are outside
+            // the input domain of this byte-oriented API.
+            if (std.unicode.isSurrogateCodepoint(code_point)) continue;
+
+            var encoded_code_point: [4]u8 = undefined;
+            const encoded_len: usize = try std.unicode.utf8Encode(code_point, &encoded_code_point);
+
+            var input_buffer: [12]u8 = undefined;
+            var input_writer: std.Io.Writer = .fixed(&input_buffer);
+            try input_writer.writeAll("%C0%");
+            try input_writer.writeAll(encoded_code_point[0..encoded_len]);
+            try input_writer.writeAll(encoded_code_point[0..encoded_len]);
+
+            if (decodeURIAlloc(testing.allocator, input_writer.buffered())) |decoded| {
+                testing.allocator.free(decoded);
+                return error.TestUnexpectedResult;
+            } else |err| {
+                try testing.expectEqual(error.URIError, err);
+            }
+        }
+    }
+}
