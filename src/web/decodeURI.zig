@@ -402,3 +402,43 @@ test "decodeURIAlloc: % at the very end of the string" {
         }
     }
 }
+
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.2_T1.js
+//
+// info: |
+//  If B = string.charAt(k+1) + string.charAt(k+2) do not represent
+//  hexadecimal digits, throw URIError
+test "decodeURIAlloc: invalid hexadecimal digit on the 2nd character after %" {
+    const intervals = [_][2]u21{
+        .{ 0x00, 0x2F },
+        .{ 0x3A, 0x40 },
+        .{ 0x47, 0x60 },
+        .{ 0x67, 0xFFFF },
+    };
+
+    for (intervals) |interval| {
+        var code_point = interval[0];
+        while (code_point <= interval[1]) : (code_point += 1) {
+            // Test262 iterates UTF-16 code units, including lone surrogates.
+            // They have no valid UTF-8 representation, so they are outside
+            // the input domain of this byte-oriented API.
+            if (std.unicode.isSurrogateCodepoint(code_point)) continue;
+
+            var encoded_code_point: [4]u8 = undefined;
+            const encoded_len: usize = try std.unicode.utf8Encode(code_point, &encoded_code_point);
+
+            var input_buffer: [8]u8 = undefined;
+            var input_writer: std.Io.Writer = .fixed(&input_buffer);
+            try input_writer.writeAll("%");
+            try input_writer.writeAll(encoded_code_point[0..encoded_len]);
+            try input_writer.writeAll("1");
+
+            if (decodeURIAlloc(testing.allocator, input_writer.buffered())) |decoded| {
+                testing.allocator.free(decoded);
+                return error.TestUnexpectedResult;
+            } else |err| {
+                try testing.expectEqual(error.URIError, err);
+            }
+        }
+    }
+}
