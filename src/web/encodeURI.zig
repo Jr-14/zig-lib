@@ -16,7 +16,16 @@ pub fn encodeURIComponentAlloc(allocator: std.mem.Allocator, uriComponent: []u8)
 
 fn isEncodeUriComponentUnescaped(byte: u8) bool {
     return std.ascii.isAlphanumeric(byte) or switch (byte) {
-        '-', '_', '.', '!', '~', '*', '\'', '(', ')', => true,
+        '-',
+        '_',
+        '.',
+        '!',
+        '~',
+        '*',
+        '\'',
+        '(',
+        ')',
+        => true,
         else => false,
     };
 }
@@ -43,8 +52,26 @@ pub fn encodeURIAlloc(allocator: std.mem.Allocator, string: []const u8) ![]u8 {
 
 fn isEncodeUriUnescaped(byte: u8) bool {
     return std.ascii.isAlphanumeric(byte) or switch (byte) {
-        '-', '_', '.', '!', '~', '*', '\'', '(', ')',
-        ';', '/', '?', ':', '@', '&', '=', '+', '$', ',', '#',
+        '-',
+        '_',
+        '.',
+        '!',
+        '~',
+        '*',
+        '\'',
+        '(',
+        ')',
+        ';',
+        '/',
+        '?',
+        ':',
+        '@',
+        '&',
+        '=',
+        '+',
+        '$',
+        ',',
+        '#',
         => true,
         else => false,
     };
@@ -67,4 +94,3 @@ test "encodeURIAlloc" {
 
     try testing.expectEqualSlices(u8, expected, "https://example.com/?choice=Ben%20&%20Jerry's");
 }
-
