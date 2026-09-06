@@ -341,3 +341,64 @@ test "decodeURIAlloc: (n = 4) invalid hex digits on the 4th byte" {
         }
     }
 }
+
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.1_T1.js
+//
+// info: If string.charAt(k) equal "%" and k + 2 >= string.length, throw URIError
+test "decodeURIAlloc: % at the very end of the string" {
+    // Check 1
+    {
+        var input_buffer: [4]u8 = undefined;
+        var input_writer: std.Io.Writer = .fixed(&input_buffer);
+        try input_writer.writeAll("%");
+
+        if (decodeURIAlloc(testing.allocator, input_writer.buffered())) |decoded| {
+            testing.allocator.free(decoded);
+            return error.TestUnexpectedResult;
+        } else |err| {
+            try testing.expectEqual(error.URIError, err);
+        }
+    }
+
+    // Check 2
+    {
+        var input_buffer: [8]u8 = undefined;
+        var input_writer: std.Io.Writer = .fixed(&input_buffer);
+        try input_writer.writeAll("%A");
+
+        if (decodeURIAlloc(testing.allocator, input_writer.buffered())) |decoded| {
+            testing.allocator.free(decoded);
+            return error.TestUnexpectedResult;
+        } else |err| {
+            try testing.expectEqual(error.URIError, err);
+        }
+    }
+
+    // Check 3
+    {
+        var input_buffer: [8]u8 = undefined;
+        var input_writer: std.Io.Writer = .fixed(&input_buffer);
+        try input_writer.writeAll("%1");
+
+        if (decodeURIAlloc(testing.allocator, input_writer.buffered())) |decoded| {
+            testing.allocator.free(decoded);
+            return error.TestUnexpectedResult;
+        } else |err| {
+            try testing.expectEqual(error.URIError, err);
+        }
+    }
+
+    // Check 4
+    {
+        var input_buffer: [8]u8 = undefined;
+        var input_writer: std.Io.Writer = .fixed(&input_buffer);
+        try input_writer.writeAll("% ");
+
+        if (decodeURIAlloc(testing.allocator, input_writer.buffered())) |decoded| {
+            testing.allocator.free(decoded);
+            return error.TestUnexpectedResult;
+        } else |err| {
+            try testing.expectEqual(error.URIError, err);
+        }
+    }
+}
