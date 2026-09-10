@@ -82,17 +82,22 @@ fn Decode(writer: *std.Io.Writer, string: []const u8, preserveEscapeSet: fn (u8)
     }
 }
 
+// Portions of the tests in this file are adapted from TC39 Test262.
+//
+// Copyright (C) Ecma International and other Test262 contributors.
+// Test262 is licensed under the BSD license.
+// See LICENSES/test262.txt.
+//
+// Upstream: https://github.com/tc39/test262
+
 const testing = std.testing;
 
-// Adapted from Test262:
-// test/built-ins/decodeURI/S15.1.3.1_A1.10_T1.js
-// Copyright 2009 the Sputnik authors. All rights reserved.
-// Licensed under the Test262 BSD license; see LICENSES/Test262.txt.
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.10_T1.js
 //
-// info: |
-//  If B = 110xxxxx (n = 2) and string.charAt(k + 4) and
-//  string.charAt(k + 5) do not represent hexadecimal digits, throw URIError
-test "decodeURIAlloc: (n = 2) invalid hex digits after a two-byte UTF-8 prefix" {
+// A `firstOctet` with the bit pattern `110xxxxx` makes `Decode` collect one
+// more percent-encoded octet. Both digits in that `%HH` escape must be ASCII
+// hexadecimal; otherwise `decodeURIAlloc` must return `error.URIError`.
+test "decodeURIAlloc: invalid hexadecimal digits in a two-byte UTF-8 sequence" {
     const intervals = [_][2]u21{
         .{ 0x00, 0x2F },
         .{ 0x3A, 0x40 },
@@ -129,11 +134,11 @@ test "decodeURIAlloc: (n = 2) invalid hex digits after a two-byte UTF-8 prefix" 
 
 // https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.11_T1.js
 //
-// info: |
-//  If B = 1110xxxx (n = 3) and (string.charAt(k + 4) and
-//  string.charAt(k + 5)) or (string.charAt(k + 7) and
-//  string.charAt(k + 8)) do not represent hexadecimal digits, throw URIError
-test "decodeURIAlloc: (n = 3) invalid hex digits on the second byte" {
+// A `firstOctet` with the bit pattern `1110xxxx` makes `Decode` collect two
+// more percent-encoded octets. Both digits in the second octet's `%HH` escape
+// must be ASCII hexadecimal; otherwise `decodeURIAlloc` must return
+// `error.URIError`.
+test "decodeURIAlloc: invalid hexadecimal digits in the second octet of a three-byte UTF-8 sequence" {
     const intervals = [_][2]u21{
         .{ 0x00, 0x2F },
         .{ 0x3A, 0x40 },
@@ -170,11 +175,11 @@ test "decodeURIAlloc: (n = 3) invalid hex digits on the second byte" {
 }
 
 // https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.11_T2.js
-// info: |
-//  If B = 1110xxxx (n = 3) and (string.charAt(k + 4) and
-//  string.charAt(k + 5)) or (string.charAt(k + 7) and
-//  string.charAt(k + 8)) do not represent hexadecimal digits, throw URIError
-test "decodeURIAlloc: (n = 3) invalid hex digits on the third byte" {
+// A `firstOctet` with the bit pattern `1110xxxx` makes `Decode` collect two
+// more percent-encoded octets. Both digits in the third octet's `%HH` escape
+// must be ASCII hexadecimal; otherwise `decodeURIAlloc` must return
+// `error.URIError`.
+test "decodeURIAlloc: invalid hexadecimal digits in the third octet of a three-byte UTF-8 sequence" {
     const intervals = [_][2]u21{
         .{ 0x00, 0x2F },
         .{ 0x3A, 0x40 },
@@ -212,12 +217,11 @@ test "decodeURIAlloc: (n = 3) invalid hex digits on the third byte" {
 
 // https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.12_T1.js
 //
-// info: |
-//  If B = 11110xxx (n = 4) and (string.charAt(k + 4) and
-//  string.charAt(k + 5)) or (string.charAt(k + 7) and
-//  string.charAt(k + 8)) or (string.charAt(k + 10) and
-//  string.charAt(k + 11)) do not represent hexadecimal digits, throw URIError
-test "decodeURIAlloc: (n = 4) invalid hex digits on the 2nd byte" {
+// A `firstOctet` with the bit pattern `11110xxx` makes `Decode` collect three
+// more percent-encoded octets. Both digits in the second octet's `%HH` escape
+// must be ASCII hexadecimal; otherwise `decodeURIAlloc` must return
+// `error.URIError`.
+test "decodeURIAlloc: invalid hexadecimal digits in the second octet of a four-byte UTF-8 sequence" {
     const intervals = [_][2]u21{
         .{ 0x00, 0x2F },
         .{ 0x3A, 0x40 },
@@ -256,12 +260,11 @@ test "decodeURIAlloc: (n = 4) invalid hex digits on the 2nd byte" {
 
 // https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.12_T2.js
 //
-// info: |
-//  If B = 11110xxx (n = 4) and (string.charAt(k + 4) and
-//  string.charAt(k + 5)) or (string.charAt(k + 7) and
-//  string.charAt(k + 8)) or (string.charAt(k + 10) and
-//  string.charAt(k + 11)) do not represent hexadecimal digits, throw URIError
-test "decodeURIAlloc: (n = 4) invalid hex digits on the 3rd byte" {
+// A `firstOctet` with the bit pattern `11110xxx` makes `Decode` collect three
+// more percent-encoded octets. Both digits in the third octet's `%HH` escape
+// must be ASCII hexadecimal; otherwise `decodeURIAlloc` must return
+// `error.URIError`.
+test "decodeURIAlloc: invalid hexadecimal digits in the third octet of a four-byte UTF-8 sequence" {
     const intervals = [_][2]u21{
         .{ 0x00, 0x2F },
         .{ 0x3A, 0x40 },
@@ -300,12 +303,11 @@ test "decodeURIAlloc: (n = 4) invalid hex digits on the 3rd byte" {
 
 // https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.12_T3.js
 //
-// info: |
-//  If B = 11110xxx (n = 4) and (string.charAt(k + 4) and
-//  string.charAt(k + 5)) or (string.charAt(k + 7) and
-//  string.charAt(k + 8)) or (string.charAt(k + 10) and
-//  string.charAt(k + 11)) do not represent hexadecimal digits, throw URIError
-test "decodeURIAlloc: (n = 4) invalid hex digits on the 4th byte" {
+// A `firstOctet` with the bit pattern `11110xxx` makes `Decode` collect three
+// more percent-encoded octets. Both digits in the fourth octet's `%HH` escape
+// must be ASCII hexadecimal; otherwise `decodeURIAlloc` must return
+// `error.URIError`.
+test "decodeURIAlloc: invalid hexadecimal digits in the fourth octet of a four-byte UTF-8 sequence" {
     const intervals = [_][2]u21{
         .{ 0x00, 0x2F },
         .{ 0x3A, 0x40 },
@@ -342,10 +344,20 @@ test "decodeURIAlloc: (n = 4) invalid hex digits on the 4th byte" {
     }
 }
 
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.13_T1.js
+//
+// A `firstOctet` with the bit pattern `110xxxxx` indicates a two-byte UTF-8
+// sequence. The following `continuationByte` must have the pattern `10xxxxxx`;
+// otherwise the octets are not valid UTF-8 and `decodeURIAlloc` must return
+// `error.URIError`.
+test "decodeURIAlloc: invalid continuation byte in a two-byte UTF-8 sequence" {}
+
 // https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.1_T1.js
 //
-// info: If string.charAt(k) equal "%" and k + 2 >= string.length, throw URIError
-test "decodeURIAlloc: % at the very end of the string" {
+// A percent escape requires exactly two ASCII hexadecimal digits after `%`.
+// If the input ends before both digits are available, `decodeURIAlloc` must
+// return `error.URIError`.
+test "decodeURIAlloc: incomplete percent escape" {
     // Check 1
     {
         var input_buffer: [4]u8 = undefined;
@@ -405,10 +417,10 @@ test "decodeURIAlloc: % at the very end of the string" {
 
 // https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.2_T1.js
 //
-// info: |
-//  If B = string.charAt(k+1) + string.charAt(k+2) do not represent
-//  hexadecimal digits, throw URIError
-test "decodeURIAlloc: invalid hexadecimal digit on the 2nd character after %" {
+// Both digits after `%` must be ASCII hexadecimal for `parseHexOctet` to
+// produce `firstOctet`. An invalid first digit must make `decodeURIAlloc`
+// return `error.URIError`.
+test "decodeURIAlloc: invalid first hexadecimal digit after %" {
     const intervals = [_][2]u21{
         .{ 0x00, 0x2F },
         .{ 0x3A, 0x40 },
@@ -445,10 +457,10 @@ test "decodeURIAlloc: invalid hexadecimal digit on the 2nd character after %" {
 
 // https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.2_T2.js
 //
-// info: |
-//  If B = string.charAt(k+1) + string.charAt(k+2) do not represent
-//  hexadecimal digits, throw URIError
-test "decodeURIAlloc: invalid hexadecimal digit on the 1st character after %" {
+// Both digits after `%` must be ASCII hexadecimal for `parseHexOctet` to
+// produce `firstOctet`. An invalid second digit must make `decodeURIAlloc`
+// return `error.URIError`.
+test "decodeURIAlloc: invalid second hexadecimal digit after %" {
     const intervals = [_][2]u21{
         .{ 0x00, 0x2F },
         .{ 0x3A, 0x40 },
