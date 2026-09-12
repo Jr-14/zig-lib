@@ -807,3 +807,26 @@ test "decodeURIAlloc: invalid second hexadecimal digit after %" {
         }
     }
 }
+
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.3_T1.js
+//
+// The `firstOctet` cannot have these leadings bits `10xxxxxx` or `11111xxx` as the leadings bits for
+// continuation bytes can only have 0, 2, 3, or 4 leading bits for valid UTF-8.
+test "decodeURIAlloc: invalid leading bits (n = 1)" {
+    for (0x80..0xC0) |i| {
+        const firstOctet: u8 = @intCast(i);
+        var buffer: [3]u8 = undefined;
+        const input = try std.fmt.bufPrint(
+            &buffer,
+            "%{X:0>2}",
+            .{firstOctet},
+        );
+
+        if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+            testing.allocator.free(decoded);
+            return error.TestUnexpectedResult;
+        } else |err| {
+            try testing.expectEqual(error.URIError, err);
+        }
+    }
+}
