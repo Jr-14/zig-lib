@@ -397,22 +397,21 @@ test "decodeURIAlloc: invalid continuation byte in a two-byte UTF-8 sequence (se
     }
 }
 
-
 // https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.14_T1.js
 //
-// A `firstOctect` with the bit pattern `1110xxxx` indicates a three-byte UTF-8
+// A `firstOctet` with the bit pattern `1110xxxx` indicates a three-byte UTF-8
 // sequence. The following `continuationByte` must have the pattern `10xxxxxx`;
 // otherwise the octects are not valid UTF-8 and `decodeURIAlloc` must return
 // `error.URIError`.
-test "decodeURIAlloc: invalid continuation byte in a three-byte UTF-8 sequence (secondOctet = 0x00..0x80)" {
+test "decodeURIAlloc: invalid continuation byte in a three-byte UTF-8 sequence (secondOctet = 0x00..0x80, thirdOctet = A0)" {
     for (0xE0..0xF0) |i| {
         const firstOctet: u8 = @intCast(i);
         for (0x00..0x80) |j| {
             const secondOctet: u8 = @intCast(j);
-            var buffer: [6]u8 = undefined;
+            var buffer: [9]u8 = undefined;
             const input = try std.fmt.bufPrint(
                 &buffer,
-                "%{X:0>2}%{X:0>2}",
+                "%{X:0>2}{X:0>2}%A0%",
                 .{ firstOctet, secondOctet },
             );
 
@@ -426,8 +425,33 @@ test "decodeURIAlloc: invalid continuation byte in a three-byte UTF-8 sequence (
     }
 }
 
-// TODO:
 // https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.14_T2.js
+//
+// A `firstOctet` with the bit pattern `1110xxxx` indicates a three-byte UTF-8
+// sequence. The following `continuationByte` must have the pattern `10xxxxxx`;
+// otherwise the octects are not valid UTF-8 and `decodeURIAlloc` must return
+// `error.URIError`.
+test "decodeURIAlloc: invalid continuation byte in a three-byte UTF-8 sequence (secondOctet = A0, thirdOctet = 0x00..0x80)" {
+    for (0xE0..0xF0) |i| {
+        const firstOctet: u8 = @intCast(i);
+        for (0x00..0x80) |j| {
+            const secondOctet: u8 = @intCast(j);
+            var buffer: [9]u8 = undefined;
+            const input = try std.fmt.bufPrint(
+                &buffer,
+                "%{X:0>2}%A0{X:0>2}",
+                .{ firstOctet, secondOctet },
+            );
+
+            if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+                testing.allocator.free(decoded);
+                return error.TestUnexpectedResult;
+            } else |err| {
+                try std.testing.expectEqual(error.URIError, err);
+            }
+        }
+    }
+}
 
 // TODO:
 // https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.14_T3.js
@@ -449,7 +473,6 @@ test "decodeURIAlloc: invalid continuation byte in a three-byte UTF-8 sequence (
 
 // TODO:
 // https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.15_T6.js
-
 
 // https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.1_T1.js
 //
