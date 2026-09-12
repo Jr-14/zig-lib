@@ -641,8 +641,29 @@ test "decodeURIAlloc: invalid continuation byte in a four-byte UTF-8 sequence (s
     }
 }
 
-// TODO:
 // https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.15_T6.js
+//
+// A `firstOctet` with the bit pattern `11110xxx` indicates a four-byte UTF-8
+// sequence. The following continuationByte` must have the pattern `10xxxxxx`;
+// otherwise the octets are not valid UTF-8 and `dedodeURIAlloc` must return
+// `error.URIError`.
+test "decodeURIAlloc: invalid continuation byte in a four-byte UTF-8 sequence (secondOctet = thirdOctet = A0, fourthOctet = 0xC0..0x100)" {
+    for (0xF0..0xF8) |i| {
+        const firstOctet: u8 = @intCast(i);
+        for (0xC0..0x100) |j| {
+            const fourthOctet: u8 = @intCast(j);
+            var buffer: [12]u8 = undefined;
+            const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}%A0%A0%{X:0>2}", .{ firstOctet, fourthOctet });
+
+            if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+                testing.allocator.free(decoded);
+                return error.TestUnexpectedResult;
+            } else |err| {
+                try testing.expectEqual(error.URIError, err);
+            }
+        }
+    }
+}
 
 // https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.1_T1.js
 //
