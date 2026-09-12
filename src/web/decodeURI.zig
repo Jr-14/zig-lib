@@ -351,17 +351,41 @@ test "decodeURIAlloc: invalid hexadecimal digits in the fourth octet of a four-b
 // sequence. The following `continuationByte` must have the pattern `10xxxxxx`;
 // otherwise the octets are not valid UTF-8 and `decodeURIAlloc` must return
 // `error.URIError`.
-test "decodeURIAlloc: invalid continuation byte in a two-byte UTF-8 sequence" {
+test "decodeURIAlloc: invalid continuation byte in a two-byte UTF-8 sequence (secondOctet = 0x00..0x80)" {
     for (0xC0..0xE0) |i| {
-        const indexA: u8 = @intCast(i);
+        const firstOctect: u8 = @intCast(i);
         for (0x00..0x80) |j| {
-            const indexB: u8 = @intCast(j);
+            const secondOctect: u8 = @intCast(j);
             var buffer: [6]u8 = undefined;
             const input = try std.fmt.bufPrint(
                 &buffer,
                 "%{X:0>2}%{X:0>2}",
-                .{ indexA, indexB },
+                .{ firstOctect, secondOctect },
             );
+
+            if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+                testing.allocator.free(decoded);
+                return error.TestUnexpectedResult;
+            } else |err| {
+                try testing.expectEqual(error.URIError, err);
+            }
+        }
+    }
+}
+
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.13_T2.js
+//
+// A `firstOctet` with the bit pattern `110xxxxx` indicates a two-byte UTF-8
+// sequence. The following `continuationByte` must have the pattern `10xxxxxx`;
+// otherwise the octets are not valid UTF-8 and `decodeURIAlloc` must return
+// `error.URIError`.
+test "decodeURIAlloc: invalid continuation byte in a two-byte UTF-8 sequence (secondOctect = 0xC0..0x100)" {
+    for (0xC0..0xE0) |i| {
+        const firstOctet: u8 = @intCast(i);
+        for (0xC0..0x100) |j| {
+            const secondOctect: u8 = @intCast(j);
+            var buffer: [6]u8 = undefined;
+            const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}%{X:0>2}", .{ firstOctet, secondOctect });
 
             if (decodeURIAlloc(testing.allocator, input)) |decoded| {
                 testing.allocator.free(decoded);
