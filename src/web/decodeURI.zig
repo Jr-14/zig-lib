@@ -397,6 +397,34 @@ test "decodeURIAlloc: invalid continuation byte in a two-byte UTF-8 sequence (se
     }
 }
 
+// TODO:
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.14_T1.js
+
+// TODO:
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.14_T2.js
+
+// TODO:
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.14_T3.js
+
+// TODO:
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.15_T1.js
+
+// TODO:
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.15_T2.js
+
+// TODO:
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.15_T3.js
+
+// TODO:
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.15_T4.js
+
+// TODO:
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.15_T5.js
+
+// TODO:
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.15_T6.js
+
+
 // https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.1_T1.js
 //
 // A percent escape requires exactly two ASCII hexadecimal digits after `%`.
