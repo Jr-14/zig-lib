@@ -893,3 +893,25 @@ test "decodeURIAlloc: missing or incomplete continuation escape (n = 3)" {
         }
     }
 }
+
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.6_T1.js
+//
+// A continuation byte (`10xxxxxx`) cannot start a UTF-8 sequence, and `11111xxx` is not a valid
+// UTF-8 starting pattern for B = 11110xxx (n = 4) and (k + 2) + 9 >= length
+test "decodeURIAlloc: missing or incomplete continuation escape (n = 4)" {
+    for (0xF0..0xF8) |i| {
+        const firstOctet: u8 = @intCast(i);
+        const suffix = "111111111";
+        for (0..suffix.len) |suffixLength| {
+            var buffer: [12]u8 = undefined;
+            const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}{s}", .{ firstOctet, suffix[0..suffixLength] });
+
+            if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+                testing.allocator.free(decoded);
+                return error.TestUnexpectedResult;
+            } else |err| {
+                try testing.expectEqual(error.URIError, err);
+            }
+        }
+    }
+}
