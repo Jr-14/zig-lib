@@ -973,7 +973,7 @@ test "decodeURIAlloc: continuation byte must be prefixed with '%' (n=3) - invali
 // https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.9_T1.js
 //
 // An escape sequence (`11110xxx`) must have the next continuation bytes be prefixed with '%'
-test "decodeURIAlloc: continuation byte must be prefixed with '%' (n = 4) - invalid first octet" {
+test "decodeURIAlloc: continuation byte must be prefixed with '%' (n = 4) - invalid first continuation byte" {
     for (0xF0..0xF8) |i| {
         const firstOctet: u8 = @intCast(i);
         var buffer: [12]u8 = undefined;
@@ -991,11 +991,29 @@ test "decodeURIAlloc: continuation byte must be prefixed with '%' (n = 4) - inva
 // https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.9_T2.js
 //
 // An escape sequence (`11110xxx`) must have the next continuation bytes be prefixed with '%'
-test "decodeURIAlloc: continuation byte mustb e prefixed with '%' (n = 4) - invalid second octet" {
+test "decodeURIAlloc: continuation byte mustb e prefixed with '%' (n = 4) - invalid second continuation byte" {
     for (0xF0..0xF8) |i| {
         const firstOctet: u8 = @intCast(i);
         var buffer: [12]u8 = undefined;
         const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}%A0111%A0", .{firstOctet});
+
+        if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+            testing.allocator.free(decoded);
+            return error.TestUnexpectedResult;
+        } else |err| {
+            try testing.expectEqual(error.URIError, err);
+        }
+    }
+}
+
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.9_T3.js
+//
+// An escape sequence (`11110xxx`) must have the next continuation bytes be prefixed with '%'
+test "decodeURIAlloc: continuation byte mustb e prefixed with '%' (n = 4) - invalid third continuation byte" {
+    for (0xF0..0xF8) |i| {
+        const firstOctet: u8 = @intCast(i);
+        var buffer: [12]u8 = undefined;
+        const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}%A0%A0111", .{firstOctet});
 
         if (decodeURIAlloc(testing.allocator, input)) |decoded| {
             testing.allocator.free(decoded);
