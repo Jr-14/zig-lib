@@ -1023,3 +1023,25 @@ test "decodeURIAlloc: continuation byte mustb e prefixed with '%' (n = 4) - inva
         }
     }
 }
+
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A2.1_T1.js
+//
+// It should not change the input byte as long as it is not '%'
+test "decodeURIAlloc: it should keep the same byte as long as the character is not '%'" {
+    for (0..65536) |value| {
+        const codePoint: u21 = @intCast(value);
+
+        if (std.unicode.isSurrogateCodepoint(codePoint) or codePoint == '%') continue;
+
+        var encoded: [4]u8 = undefined;
+        const encodedLen = try std.unicode.utf8Encode(codePoint, &encoded);
+        const input = encoded[0..encodedLen];
+
+        if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+            defer testing.allocator.free(decoded);
+            try testing.expectEqualSlices(u8, input, decoded);
+        } else |err| {
+            return err;
+        }
+    }
+}
