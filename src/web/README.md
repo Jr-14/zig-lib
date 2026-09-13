@@ -41,7 +41,7 @@ The tests are covered by the BSD License found [here](https://github.com/tc39/te
 - [x] S15.1.3.1_A1.6_T1.js
 - [x] S15.1.3.1_A1.7_T1.js
 - [x] S15.1.3.1_A1.8_T1.js
-- [ ] S15.1.3.1_A1.8_T2.js
+- [x] S15.1.3.1_A1.8_T2.js
 - [ ] S15.1.3.1_A1.9_T1.js
 - [ ] S15.1.3.1_A1.9_T2.js
 - [ ] S15.1.3.1_A1.9_T3.js
