@@ -849,3 +849,25 @@ test "decodeURIAlloc: invalid leading bits (n = 5)" {
         }
     }
 }
+
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.4_T1.js
+//
+// A continuation byte (`10xxxxxx`) cannot start a UTF-8 sequence, and `11111xxx` is not a valid
+// UTF-8 starting pattern
+test "decodeURIAlloc: missing or incomplete continuation escape" {
+    for (0xC0..0xE0) |i| {
+        const firstOctet: u8 = @intCast(i);
+        const suffix = "111";
+        for (0..suffix.len) |suffixLength| {
+            var buffer: [6]u8 = undefined;
+            const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}{s}", .{ firstOctet, suffix[0..suffixLength] });
+
+            if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+                testing.allocator.free(decoded);
+                return error.TestUnexpectedResult;
+            } else |err| {
+                try testing.expectEqual(error.URIError, err);
+            }
+        }
+    }
+}
