@@ -915,3 +915,21 @@ test "decodeURIAlloc: missing or incomplete continuation escape (n = 4)" {
         }
     }
 }
+
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.7_T1.js
+//
+// An escape sequence (`110xxxxx`) must have the next continuation bytes be prefixed with '%'
+test "decodeURIAlloc: continuation byte must be prefixed with '%' (n = 2)" {
+    for (0xC0..0xE0) |i| {
+        const firstOctet: u8 = @intCast(i);
+        var buffer: [6]u8 = undefined;
+        const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}111", .{firstOctet});
+
+        if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+            testing.allocator.free(decoded);
+            return error.TestUnexpectedResult;
+        } else |err| {
+            try testing.expectEqual(error.URIError, err);
+        }
+    }
+}
