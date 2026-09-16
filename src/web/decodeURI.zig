@@ -1045,3 +1045,27 @@ test "decodeURIAlloc: it should keep the same byte as long as the character is n
         }
     }
 }
+
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A2.2_T1.js
+//
+// If there is no continuation byte and it's not a reserved character, it should return the character
+test "decodeURIAlloc: it should return the byte as long as it's not a reserved character (no continuation byte)" {
+    const uriReserved = ";/?:@&=+$,";
+    skip: for (0x00..0x80) |i| {
+        const octet: u8 = @intCast(i);
+        for (uriReserved) |char| {
+            if (char == octet) continue :skip;
+        }
+        if (octet == '#') continue :skip;
+
+        var buffer: [3]u8 = undefined;
+        const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}", .{octet});
+        if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+            defer testing.allocator.free(decoded);
+            const expected = [_]u8{octet};
+            try testing.expectEqualSlices(u8, expected[0..], decoded);
+        } else |err| {
+            return err;
+        }
+    }
+}
