@@ -1091,3 +1091,32 @@ test "decodeURIAlloc: it should return the bytes correctly decoded (n=2)" {
         }
     }
 }
+
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A2.4_T1.js
+//
+// It should return the decoded character
+test "decodeURIAlloc: it should return the bytes correctly decoded (n=3)" {
+    for (0xE0..0xF0) |i| {
+        const firstOctet: u8 = @intCast(i);
+        for (0x80..0xC0) |j| {
+            const secondOctet: u8 = @intCast(j);
+            if (firstOctet == 0xE0 and secondOctet <= 0x9F) continue;
+            if (firstOctet == 0xED and 0xA0 <= secondOctet) continue;
+
+            for (0x80..0xC0) |k| {
+                const thirdOctet: u8 = @intCast(k);
+
+                var buffer: [9]u8 = undefined;
+                const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}%{X:0>2}%{X:0>2}", .{ firstOctet, secondOctet, thirdOctet });
+
+                if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+                    defer testing.allocator.free(decoded);
+                    const expected = [_]u8{ firstOctet, secondOctet, thirdOctet };
+                    try testing.expectEqualSlices(u8, expected[0..], decoded);
+                } else |err| {
+                    return err;
+                }
+            }
+        }
+    }
+}
