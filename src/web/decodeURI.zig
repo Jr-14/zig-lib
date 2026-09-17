@@ -92,6 +92,9 @@ fn Decode(writer: *std.Io.Writer, string: []const u8, preserveEscapeSet: fn (u8)
 
 const testing = std.testing;
 
+// TODO:!!!!
+// Precompute and generate the %HH tables at comptime rather than calculating and using the writer at runtime.
+
 // https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.10_T1.js
 //
 // A `firstOctet` with the bit pattern `110xxxxx` makes `Decode` collect one
