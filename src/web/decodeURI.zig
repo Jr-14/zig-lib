@@ -1069,3 +1069,25 @@ test "decodeURIAlloc: it should return the byte as long as it's not a reserved c
         }
     }
 }
+
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A2.3_T1.js
+//
+// It should return the decoded character
+test "decodeURIAlloc: it should return the bytes correctly decoded (n=2)" {
+    for (0xC2..0xE0) |i| {
+        const firstOctet: u8 = @intCast(i);
+        for (0x80..0xC0) |j| {
+            const secondOctet: u8 = @intCast(j);
+
+            var buffer: [6]u8 = undefined;
+            const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}%{X:0>2}", .{ firstOctet, secondOctet });
+            if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+                defer testing.allocator.free(decoded);
+                const expected = [_]u8{ firstOctet, secondOctet };
+                try testing.expectEqualSlices(u8, expected[0..2], decoded);
+            } else |err| {
+                return err;
+            }
+        }
+    }
+}
