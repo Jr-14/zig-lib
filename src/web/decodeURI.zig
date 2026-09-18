@@ -92,8 +92,22 @@ fn Decode(writer: *std.Io.Writer, string: []const u8, preserveEscapeSet: fn (u8)
 
 const testing = std.testing;
 
-// TODO:!!!!
 // Precompute and generate the %HH tables at comptime rather than calculating and using the writer at runtime.
+const percentEscapeTable: [256][3]u8 = blk: {
+    const hex = "0123456789ABCDEF";
+    var table: [256][3]u8 = undefined;
+
+    for (0..256) |i| {
+        const byte: u8 = @intCast(i);
+        table[i] = .{
+            '%',
+            hex[byte >> 4],
+            hex[byte & 0x0F],
+        };
+    }
+
+    break :blk table;
+};
 
 // https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.10_T1.js
 //
@@ -355,18 +369,14 @@ test "decodeURIAlloc: invalid hexadecimal digits in the fourth octet of a four-b
 // otherwise the octets are not valid UTF-8 and `decodeURIAlloc` must return
 // `error.URIError`.
 test "decodeURIAlloc: invalid continuation byte in a two-byte UTF-8 sequence (secondOctet = 0x00..0x80)" {
+    var buffer: [6]u8 = undefined;
     for (0xC0..0xE0) |i| {
         const firstOctect: u8 = @intCast(i);
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctect][0..]);
         for (0x00..0x80) |j| {
             const secondOctect: u8 = @intCast(j);
-            var buffer: [6]u8 = undefined;
-            const input = try std.fmt.bufPrint(
-                &buffer,
-                "%{X:0>2}%{X:0>2}",
-                .{ firstOctect, secondOctect },
-            );
-
-            if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+            @memcpy(buffer[3..6], percentEscapeTable[secondOctect][0..]);
+            if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
                 testing.allocator.free(decoded);
                 return error.TestUnexpectedResult;
             } else |err| {
@@ -383,14 +393,15 @@ test "decodeURIAlloc: invalid continuation byte in a two-byte UTF-8 sequence (se
 // otherwise the octets are not valid UTF-8 and `decodeURIAlloc` must return
 // `error.URIError`.
 test "decodeURIAlloc: invalid continuation byte in a two-byte UTF-8 sequence (secondOctet = 0xC0..0x100)" {
+    var buffer: [6]u8 = undefined;
     for (0xC0..0xE0) |i| {
         const firstOctet: u8 = @intCast(i);
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
         for (0xC0..0x100) |j| {
             const secondOctet: u8 = @intCast(j);
-            var buffer: [6]u8 = undefined;
-            const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}%{X:0>2}", .{ firstOctet, secondOctet });
+            @memcpy(buffer[3..6], percentEscapeTable[secondOctet][0..]);
 
-            if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+            if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
                 testing.allocator.free(decoded);
                 return error.TestUnexpectedResult;
             } else |err| {
@@ -407,18 +418,16 @@ test "decodeURIAlloc: invalid continuation byte in a two-byte UTF-8 sequence (se
 // otherwise the octets are not valid UTF-8 and `decodeURIAlloc` must return
 // `error.URIError`.
 test "decodeURIAlloc: invalid continuation byte in a three-byte UTF-8 sequence (secondOctet = 0x00..0x80, thirdOctet = A0)" {
+    var buffer: [9]u8 = undefined;
+    @memcpy(buffer[6..9], "%A0");
     for (0xE0..0xF0) |i| {
         const firstOctet: u8 = @intCast(i);
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
         for (0x00..0x80) |j| {
             const secondOctet: u8 = @intCast(j);
-            var buffer: [9]u8 = undefined;
-            const input = try std.fmt.bufPrint(
-                &buffer,
-                "%{X:0>2}{X:0>2}%A0%",
-                .{ firstOctet, secondOctet },
-            );
+            @memcpy(buffer[3..6], percentEscapeTable[secondOctet][0..]);
 
-            if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+            if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
                 testing.allocator.free(decoded);
                 return error.TestUnexpectedResult;
             } else |err| {
@@ -435,18 +444,16 @@ test "decodeURIAlloc: invalid continuation byte in a three-byte UTF-8 sequence (
 // otherwise the octets are not valid UTF-8 and `decodeURIAlloc` must return
 // `error.URIError`.
 test "decodeURIAlloc: invalid continuation byte in a three-byte UTF-8 sequence (secondOctet = A0, thirdOctet = 0x00..0x80)" {
+    var buffer: [9]u8 = undefined;
+    @memcpy(buffer[3..6], "%A0");
     for (0xE0..0xF0) |i| {
         const firstOctet: u8 = @intCast(i);
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
         for (0x00..0x80) |j| {
             const thirdOctet: u8 = @intCast(j);
-            var buffer: [9]u8 = undefined;
-            const input = try std.fmt.bufPrint(
-                &buffer,
-                "%{X:0>2}%A0{X:0>2}",
-                .{ firstOctet, thirdOctet },
-            );
+            @memcpy(buffer[6..9], percentEscapeTable[thirdOctet][0..]);
 
-            if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+            if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
                 testing.allocator.free(decoded);
                 return error.TestUnexpectedResult;
             } else |err| {
@@ -463,18 +470,16 @@ test "decodeURIAlloc: invalid continuation byte in a three-byte UTF-8 sequence (
 // otherwise the octets are not valid UTF-8 and `decodeURIAlloc` must return
 // `error.URIError`.
 test "decodeURIAlloc: invalid continuation byte in a three-byte UTF-8 sequence (secondOctet = 0xC0..0x100, thirdOctet = A0)" {
+    var buffer: [9]u8 = undefined;
+    @memcpy(buffer[6..9], "%A0");
     for (0xE0..0xF0) |i| {
         const firstOctet: u8 = @intCast(i);
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
         for (0xC0..0x100) |j| {
             const secondOctet: u8 = @intCast(j);
-            var buffer: [9]u8 = undefined;
-            const input = try std.fmt.bufPrint(
-                &buffer,
-                "%{X:0>2}{X:0>2}%A0%",
-                .{ firstOctet, secondOctet },
-            );
+            @memcpy(buffer[3..6], percentEscapeTable[secondOctet][0..]);
 
-            if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+            if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
                 testing.allocator.free(decoded);
                 return error.TestUnexpectedResult;
             } else |err| {
@@ -491,18 +496,16 @@ test "decodeURIAlloc: invalid continuation byte in a three-byte UTF-8 sequence (
 // otherwise the octets are not valid UTF-8 and `decodeURIAlloc` must return
 // `error.URIError`.
 test "decodeURIAlloc: invalid continuation byte in a three-byte UTF-8 sequence (secondOctet = A0, thirdOctet = 0xC0..0x100)" {
+    var buffer: [9]u8 = undefined;
+    @memcpy(buffer[3..6], "%A0");
     for (0xE0..0xF0) |i| {
         const firstOctet: u8 = @intCast(i);
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
         for (0xC0..0x100) |j| {
             const thirdOctet: u8 = @intCast(j);
-            var buffer: [9]u8 = undefined;
-            const input = try std.fmt.bufPrint(
-                &buffer,
-                "%{X:0>2}%A0{X:0>2}",
-                .{ firstOctet, thirdOctet },
-            );
+            @memcpy(buffer[6..9], percentEscapeTable[thirdOctet][0..]);
 
-            if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+            if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
                 testing.allocator.free(decoded);
                 return error.TestUnexpectedResult;
             } else |err| {
@@ -519,18 +522,16 @@ test "decodeURIAlloc: invalid continuation byte in a three-byte UTF-8 sequence (
 // otherwise the octets are not valid UTF-8 and `dedodeURIAlloc` must return
 // `error.URIError`.
 test "decodeURIAlloc: invalid continuation byte in a four-byte UTF-8 sequence (secondOctet = 0x00..0x80, thirdOctet = fourthOctet = A0)" {
+    var buffer: [12]u8 = undefined;
+    @memcpy(buffer[6..12], "%A0%A0");
     for (0xF0..0xF8) |i| {
         const firstOctet: u8 = @intCast(i);
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
         for (0x00..0x80) |j| {
             const secondOctet: u8 = @intCast(j);
-            var buffer: [12]u8 = undefined;
-            const input = try std.fmt.bufPrint(
-                &buffer,
-                "%{X:0>2}%{X:0>2}%A0%A0",
-                .{ firstOctet, secondOctet },
-            );
+            @memcpy(buffer[3..6], percentEscapeTable[secondOctet][0..]);
 
-            if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+            if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
                 testing.allocator.free(decoded);
                 return error.TestUnexpectedResult;
             } else |err| {
@@ -547,18 +548,17 @@ test "decodeURIAlloc: invalid continuation byte in a four-byte UTF-8 sequence (s
 // otherwise the octets are not valid UTF-8 and `dedodeURIAlloc` must return
 // `error.URIError`.
 test "decodeURIAlloc: invalid continuation byte in a four-byte UTF-8 sequence (thirdOctet = 0x00..0x80, secondOctet = fourthOctet = A0)" {
+    var buffer: [12]u8 = undefined;
+    @memcpy(buffer[3..6], "%A0");
+    @memcpy(buffer[9..12], "%A0");
     for (0xF0..0xF8) |i| {
         const firstOctet: u8 = @intCast(i);
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
         for (0x00..0x80) |j| {
             const thirdOctet: u8 = @intCast(j);
-            var buffer: [12]u8 = undefined;
-            const input = try std.fmt.bufPrint(
-                &buffer,
-                "%{X:0>2}%A0%{X:0>2}%A0",
-                .{ firstOctet, thirdOctet },
-            );
+            @memcpy(buffer[6..9], percentEscapeTable[thirdOctet][0..]);
 
-            if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+            if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
                 testing.allocator.free(decoded);
                 return error.TestUnexpectedResult;
             } else |err| {
@@ -575,18 +575,16 @@ test "decodeURIAlloc: invalid continuation byte in a four-byte UTF-8 sequence (t
 // otherwise the octets are not valid UTF-8 and `dedodeURIAlloc` must return
 // `error.URIError`.
 test "decodeURIAlloc: invalid continuation byte in a four-byte UTF-8 sequence (secondOctet = thirdOctet = A0, fourthOctet = 0x00..0x80)" {
+    var buffer: [12]u8 = undefined;
+    @memcpy(buffer[3..9], "%A0%A0");
     for (0xF0..0xF8) |i| {
         const firstOctet: u8 = @intCast(i);
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
         for (0x00..0x80) |j| {
             const fourthOctet: u8 = @intCast(j);
-            var buffer: [12]u8 = undefined;
-            const input = try std.fmt.bufPrint(
-                &buffer,
-                "%{X:0>2}%A0%A0%{X:0>2}",
-                .{ firstOctet, fourthOctet },
-            );
+            @memcpy(buffer[9..12], percentEscapeTable[fourthOctet][0..]);
 
-            if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+            if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
                 testing.allocator.free(decoded);
                 return error.TestUnexpectedResult;
             } else |err| {
@@ -603,14 +601,16 @@ test "decodeURIAlloc: invalid continuation byte in a four-byte UTF-8 sequence (s
 // otherwise the octets are not valid UTF-8 and `dedodeURIAlloc` must return
 // `error.URIError`.
 test "decodeURIAlloc: invalid continuation byte in a four-byte UTF-8 sequence (secondOctet = 0xC0..0x100, thirdOctet = fourthOctet = A0)" {
+    var buffer: [12]u8 = undefined;
+    @memcpy(buffer[6..12], "%A0%A0");
     for (0xF0..0xF8) |i| {
         const firstOctet: u8 = @intCast(i);
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
         for (0xC0..0x100) |j| {
             const secondOctet: u8 = @intCast(j);
-            var buffer: [12]u8 = undefined;
-            const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}%{X:0>2}%A0%A0", .{ firstOctet, secondOctet });
+            @memcpy(buffer[3..6], percentEscapeTable[secondOctet][0..]);
 
-            if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+            if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
                 testing.allocator.free(decoded);
                 return error.TestUnexpectedResult;
             } else |err| {
@@ -627,14 +627,17 @@ test "decodeURIAlloc: invalid continuation byte in a four-byte UTF-8 sequence (s
 // otherwise the octets are not valid UTF-8 and `dedodeURIAlloc` must return
 // `error.URIError`.
 test "decodeURIAlloc: invalid continuation byte in a four-byte UTF-8 sequence (secondOctet = fourthOctet = A0, thirdOctet = 0xC0..0x100)" {
+    var buffer: [12]u8 = undefined;
+    @memcpy(buffer[3..6], "%A0");
+    @memcpy(buffer[9..12], "%A0");
     for (0xF0..0xF8) |i| {
         const firstOctet: u8 = @intCast(i);
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
         for (0xC0..0x100) |j| {
             const thirdOctet: u8 = @intCast(j);
-            var buffer: [12]u8 = undefined;
-            const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}%A0%{X:0>2}%A0", .{ firstOctet, thirdOctet });
+            @memcpy(buffer[6..9], percentEscapeTable[thirdOctet][0..]);
 
-            if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+            if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
                 testing.allocator.free(decoded);
                 return error.TestUnexpectedResult;
             } else |err| {
@@ -651,14 +654,16 @@ test "decodeURIAlloc: invalid continuation byte in a four-byte UTF-8 sequence (s
 // otherwise the octets are not valid UTF-8 and `dedodeURIAlloc` must return
 // `error.URIError`.
 test "decodeURIAlloc: invalid continuation byte in a four-byte UTF-8 sequence (secondOctet = thirdOctet = A0, fourthOctet = 0xC0..0x100)" {
+    var buffer: [12]u8 = undefined;
     for (0xF0..0xF8) |i| {
         const firstOctet: u8 = @intCast(i);
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
+        @memcpy(buffer[3..9], "%A0%A0");
         for (0xC0..0x100) |j| {
             const fourthOctet: u8 = @intCast(j);
-            var buffer: [12]u8 = undefined;
-            const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}%A0%A0%{X:0>2}", .{ firstOctet, fourthOctet });
+            @memcpy(buffer[9..12], percentEscapeTable[fourthOctet][0..]);
 
-            if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+            if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
                 testing.allocator.free(decoded);
                 return error.TestUnexpectedResult;
             } else |err| {
@@ -676,11 +681,9 @@ test "decodeURIAlloc: invalid continuation byte in a four-byte UTF-8 sequence (s
 test "decodeURIAlloc: incomplete percent escape" {
     // Check 1
     {
-        var input_buffer: [4]u8 = undefined;
-        var input_writer: std.Io.Writer = .fixed(&input_buffer);
-        try input_writer.writeAll("%");
+        const input = "%";
 
-        if (decodeURIAlloc(testing.allocator, input_writer.buffered())) |decoded| {
+        if (decodeURIAlloc(testing.allocator, input[0..])) |decoded| {
             testing.allocator.free(decoded);
             return error.TestUnexpectedResult;
         } else |err| {
@@ -690,11 +693,9 @@ test "decodeURIAlloc: incomplete percent escape" {
 
     // Check 2
     {
-        var input_buffer: [8]u8 = undefined;
-        var input_writer: std.Io.Writer = .fixed(&input_buffer);
-        try input_writer.writeAll("%A");
+        const input = "%A";
 
-        if (decodeURIAlloc(testing.allocator, input_writer.buffered())) |decoded| {
+        if (decodeURIAlloc(testing.allocator, input[0..])) |decoded| {
             testing.allocator.free(decoded);
             return error.TestUnexpectedResult;
         } else |err| {
@@ -704,11 +705,9 @@ test "decodeURIAlloc: incomplete percent escape" {
 
     // Check 3
     {
-        var input_buffer: [8]u8 = undefined;
-        var input_writer: std.Io.Writer = .fixed(&input_buffer);
-        try input_writer.writeAll("%1");
+        const input = "%1";
 
-        if (decodeURIAlloc(testing.allocator, input_writer.buffered())) |decoded| {
+        if (decodeURIAlloc(testing.allocator, input[0..])) |decoded| {
             testing.allocator.free(decoded);
             return error.TestUnexpectedResult;
         } else |err| {
@@ -718,11 +717,9 @@ test "decodeURIAlloc: incomplete percent escape" {
 
     // Check 4
     {
-        var input_buffer: [8]u8 = undefined;
-        var input_writer: std.Io.Writer = .fixed(&input_buffer);
-        try input_writer.writeAll("% ");
+        const input = "% ";
 
-        if (decodeURIAlloc(testing.allocator, input_writer.buffered())) |decoded| {
+        if (decodeURIAlloc(testing.allocator, input[0..])) |decoded| {
             testing.allocator.free(decoded);
             return error.TestUnexpectedResult;
         } else |err| {
@@ -744,6 +741,7 @@ test "decodeURIAlloc: invalid first hexadecimal digit after %" {
         .{ 0x67, 0xFFFF },
     };
 
+    var buffer: [8]u8 = undefined;
     for (intervals) |interval| {
         var code_point = interval[0];
         while (code_point <= interval[1]) : (code_point += 1) {
@@ -755,13 +753,12 @@ test "decodeURIAlloc: invalid first hexadecimal digit after %" {
             var encoded_code_point: [4]u8 = undefined;
             const encoded_len: usize = try std.unicode.utf8Encode(code_point, &encoded_code_point);
 
-            var input_buffer: [8]u8 = undefined;
-            var input_writer: std.Io.Writer = .fixed(&input_buffer);
-            try input_writer.writeAll("%");
-            try input_writer.writeAll(encoded_code_point[0..encoded_len]);
-            try input_writer.writeAll("1");
+            const length: usize = 1 + encoded_len;
+            @memcpy(buffer[0..1], "%");
+            @memcpy(buffer[1..length], encoded_code_point[0..encoded_len]);
+            @memcpy(buffer[length .. length + 1], "1");
 
-            if (decodeURIAlloc(testing.allocator, input_writer.buffered())) |decoded| {
+            if (decodeURIAlloc(testing.allocator, buffer[0..length])) |decoded| {
                 testing.allocator.free(decoded);
                 return error.TestUnexpectedResult;
             } else |err| {
@@ -784,6 +781,7 @@ test "decodeURIAlloc: invalid second hexadecimal digit after %" {
         .{ 0x67, 0xFFFF },
     };
 
+    var buffer: [8]u8 = undefined;
     for (intervals) |interval| {
         var code_point = interval[0];
         while (code_point <= interval[1]) : (code_point += 1) {
@@ -795,13 +793,11 @@ test "decodeURIAlloc: invalid second hexadecimal digit after %" {
             var encoded_code_point: [4]u8 = undefined;
             const encoded_len: usize = try std.unicode.utf8Encode(code_point, &encoded_code_point);
 
-            var input_buffer: [8]u8 = undefined;
-            var input_writer: std.Io.Writer = .fixed(&input_buffer);
-            try input_writer.writeAll("%");
-            try input_writer.writeAll("1");
-            try input_writer.writeAll(encoded_code_point[0..encoded_len]);
+            const length: usize = 2 + encoded_len;
+            @memcpy(buffer[0..2], "%1");
+            @memcpy(buffer[2..length], encoded_code_point[0..encoded_len]);
 
-            if (decodeURIAlloc(testing.allocator, input_writer.buffered())) |decoded| {
+            if (decodeURIAlloc(testing.allocator, buffer[0..length])) |decoded| {
                 testing.allocator.free(decoded);
                 return error.TestUnexpectedResult;
             } else |err| {
@@ -816,16 +812,12 @@ test "decodeURIAlloc: invalid second hexadecimal digit after %" {
 // The `firstOctet` cannot have these leadings bits `10xxxxxx` or `11111xxx` as the leadings bits for
 // continuation bytes can only have 0, 2, 3, or 4 leading bits for valid UTF-8.
 test "decodeURIAlloc: invalid leading bits (n = 1)" {
+    var buffer: [3]u8 = undefined;
     for (0x80..0xC0) |i| {
         const firstOctet: u8 = @intCast(i);
-        var buffer: [3]u8 = undefined;
-        const input = try std.fmt.bufPrint(
-            &buffer,
-            "%{X:0>2}",
-            .{firstOctet},
-        );
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
 
-        if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+        if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
             testing.allocator.free(decoded);
             return error.TestUnexpectedResult;
         } else |err| {
@@ -839,12 +831,12 @@ test "decodeURIAlloc: invalid leading bits (n = 1)" {
 // The `firstOctet` cannot have these leadings bits `10xxxxxx` or `11111xxx` as the leadings bits for
 // continuation bytes can only have 0, 2, 3, or 4 leading bits for valid UTF-8.
 test "decodeURIAlloc: invalid leading bits (n = 5)" {
+    var buffer: [3]u8 = undefined;
     for (0xF8..0x100) |i| {
         const firstOctet: u8 = @intCast(i);
-        var buffer: [3]u8 = undefined;
-        const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}", .{firstOctet});
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
 
-        if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+        if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
             testing.allocator.free(decoded);
             return error.TestUnexpectedResult;
         } else |err| {
@@ -858,14 +850,16 @@ test "decodeURIAlloc: invalid leading bits (n = 5)" {
 // A continuation byte (`10xxxxxx`) cannot start a UTF-8 sequence, and `11111xxx` is not a valid
 // UTF-8 starting pattern for B = 110xxxxx (n = 2) and (k + 2) + 3 >= length
 test "decodeURIAlloc: missing or incomplete continuation escape (n = 2)" {
+    var buffer: [6]u8 = undefined;
     for (0xC0..0xE0) |i| {
         const firstOctet: u8 = @intCast(i);
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
         const suffix = "111";
-        for (0..suffix.len) |suffixLength| {
-            var buffer: [6]u8 = undefined;
-            const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}{s}", .{ firstOctet, suffix[0..suffixLength] });
+        for (0..suffix.len) |suffixLen| {
+            const length: usize = 3 + suffixLen;
+            @memcpy(buffer[3..length], suffix[0..suffixLen]);
 
-            if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+            if (decodeURIAlloc(testing.allocator, buffer[0..length])) |decoded| {
                 testing.allocator.free(decoded);
                 return error.TestUnexpectedResult;
             } else |err| {
@@ -880,14 +874,16 @@ test "decodeURIAlloc: missing or incomplete continuation escape (n = 2)" {
 // A continuation byte (`10xxxxxx`) cannot start a UTF-8 sequence, and `11111xxx` is not a valid
 // UTF-8 starting pattern for B = 1110xxxx (n = 3) and (k + 2) + 6 >= length
 test "decodeURIAlloc: missing or incomplete continuation escape (n = 3)" {
+    var buffer: [9]u8 = undefined;
     for (0xE0..0xF0) |i| {
         const firstOctet: u8 = @intCast(i);
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
         const suffix = "111111";
-        for (0..suffix.len) |suffixLength| {
-            var buffer: [9]u8 = undefined;
-            const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}{s}", .{ firstOctet, suffix[0..suffixLength] });
+        for (0..suffix.len) |suffixLen| {
+            const length: usize = 3 + suffixLen;
+            @memcpy(buffer[3..length], suffix[0..suffixLen]);
 
-            if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+            if (decodeURIAlloc(testing.allocator, buffer[0..length])) |decoded| {
                 testing.allocator.free(decoded);
                 return error.TestUnexpectedResult;
             } else |err| {
@@ -902,14 +898,16 @@ test "decodeURIAlloc: missing or incomplete continuation escape (n = 3)" {
 // A continuation byte (`10xxxxxx`) cannot start a UTF-8 sequence, and `11111xxx` is not a valid
 // UTF-8 starting pattern for B = 11110xxx (n = 4) and (k + 2) + 9 >= length
 test "decodeURIAlloc: missing or incomplete continuation escape (n = 4)" {
+    var buffer: [12]u8 = undefined;
     for (0xF0..0xF8) |i| {
         const firstOctet: u8 = @intCast(i);
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
         const suffix = "111111111";
-        for (0..suffix.len) |suffixLength| {
-            var buffer: [12]u8 = undefined;
-            const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}{s}", .{ firstOctet, suffix[0..suffixLength] });
+        for (0..suffix.len) |suffixLen| {
+            const length: usize = 3 + suffixLen;
+            @memcpy(buffer[3..length], suffix[0..suffixLen]);
 
-            if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+            if (decodeURIAlloc(testing.allocator, buffer[0..length])) |decoded| {
                 testing.allocator.free(decoded);
                 return error.TestUnexpectedResult;
             } else |err| {
@@ -923,12 +921,13 @@ test "decodeURIAlloc: missing or incomplete continuation escape (n = 4)" {
 //
 // An escape sequence (`110xxxxx`) must have the next continuation bytes be prefixed with '%'
 test "decodeURIAlloc: continuation byte must be prefixed with '%' (n = 2)" {
+    var buffer: [6]u8 = undefined;
     for (0xC0..0xE0) |i| {
         const firstOctet: u8 = @intCast(i);
-        var buffer: [6]u8 = undefined;
-        const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}111", .{firstOctet});
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
+        @memcpy(buffer[3..6], "111");
 
-        if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+        if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
             testing.allocator.free(decoded);
             return error.TestUnexpectedResult;
         } else |err| {
@@ -941,12 +940,13 @@ test "decodeURIAlloc: continuation byte must be prefixed with '%' (n = 2)" {
 //
 // An escape sequence (`1110xxxx) must have the next continuation bytes be prefixed with '%'
 test "decodeURIAlloc: continuation byte must be prefixed with '%' (n = 3) - invalid 2nd octet" {
+    var buffer: [9]u8 = undefined;
     for (0xE0..0xF0) |i| {
         const firstOctet: u8 = @intCast(i);
-        var buffer: [9]u8 = undefined;
-        const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}111%A0", .{firstOctet});
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
+        @memcpy(buffer[3..9], "111%A0");
 
-        if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+        if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
             testing.allocator.free(decoded);
             return error.TestUnexpectedResult;
         } else |err| {
@@ -959,12 +959,13 @@ test "decodeURIAlloc: continuation byte must be prefixed with '%' (n = 3) - inva
 //
 // An escape sequence (`1110xxxx`) must have the next continuation bytes be prefixed with '%'
 test "decodeURIAlloc: continuation byte must be prefixed with '%' (n=3) - invalid third octet" {
+    var buffer: [9]u8 = undefined;
     for (0xE0..0xF0) |i| {
         const firstOctet: u8 = @intCast(i);
-        var buffer: [9]u8 = undefined;
-        const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}%A0111", .{firstOctet});
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
+        @memcpy(buffer[3..9], "%A0111");
 
-        if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+        if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
             testing.allocator.free(decoded);
             return error.TestUnexpectedResult;
         } else |err| {
@@ -977,12 +978,13 @@ test "decodeURIAlloc: continuation byte must be prefixed with '%' (n=3) - invali
 //
 // An escape sequence (`11110xxx`) must have the next continuation bytes be prefixed with '%'
 test "decodeURIAlloc: continuation byte must be prefixed with '%' (n = 4) - invalid first continuation byte" {
+    var buffer: [12]u8 = undefined;
     for (0xF0..0xF8) |i| {
         const firstOctet: u8 = @intCast(i);
-        var buffer: [12]u8 = undefined;
-        const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}111%A0%A0", .{firstOctet});
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
+        @memcpy(buffer[3..12], "111%A0%A0");
 
-        if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+        if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
             testing.allocator.free(decoded);
             return error.TestUnexpectedResult;
         } else |err| {
@@ -995,12 +997,13 @@ test "decodeURIAlloc: continuation byte must be prefixed with '%' (n = 4) - inva
 //
 // An escape sequence (`11110xxx`) must have the next continuation bytes be prefixed with '%'
 test "decodeURIAlloc: continuation byte mustb e prefixed with '%' (n = 4) - invalid second continuation byte" {
+    var buffer: [12]u8 = undefined;
     for (0xF0..0xF8) |i| {
         const firstOctet: u8 = @intCast(i);
-        var buffer: [12]u8 = undefined;
-        const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}%A0111%A0", .{firstOctet});
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
+        @memcpy(buffer[3..12], "%A0111%A0");
 
-        if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+        if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
             testing.allocator.free(decoded);
             return error.TestUnexpectedResult;
         } else |err| {
@@ -1013,12 +1016,13 @@ test "decodeURIAlloc: continuation byte mustb e prefixed with '%' (n = 4) - inva
 //
 // An escape sequence (`11110xxx`) must have the next continuation bytes be prefixed with '%'
 test "decodeURIAlloc: continuation byte mustb e prefixed with '%' (n = 4) - invalid third continuation byte" {
+    var buffer: [12]u8 = undefined;
     for (0xF0..0xF8) |i| {
         const firstOctet: u8 = @intCast(i);
-        var buffer: [12]u8 = undefined;
-        const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}%A0%A0111", .{firstOctet});
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
+        @memcpy(buffer[3..12], "%A0%A0111");
 
-        if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+        if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
             testing.allocator.free(decoded);
             return error.TestUnexpectedResult;
         } else |err| {
@@ -1053,6 +1057,7 @@ test "decodeURIAlloc: it should keep the same byte as long as the character is n
 //
 // If there is no continuation byte and it's not a reserved character, it should return the character
 test "decodeURIAlloc: it should return the byte as long as it's not a reserved character (no continuation byte)" {
+    var buffer: [3]u8 = undefined;
     const uriReserved = ";/?:@&=+$,";
     skip: for (0x00..0x80) |i| {
         const octet: u8 = @intCast(i);
@@ -1060,10 +1065,9 @@ test "decodeURIAlloc: it should return the byte as long as it's not a reserved c
             if (char == octet) continue :skip;
         }
         if (octet == '#') continue :skip;
+        @memcpy(buffer[0..3], percentEscapeTable[octet][0..]);
 
-        var buffer: [3]u8 = undefined;
-        const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}", .{octet});
-        if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+        if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
             defer testing.allocator.free(decoded);
             const expected = [_]u8{octet};
             try testing.expectEqualSlices(u8, expected[0..], decoded);
@@ -1077,14 +1081,16 @@ test "decodeURIAlloc: it should return the byte as long as it's not a reserved c
 //
 // It should return the decoded character
 test "decodeURIAlloc: it should return the bytes correctly decoded (n=2)" {
+    var buffer: [6]u8 = undefined;
     for (0xC2..0xE0) |i| {
         const firstOctet: u8 = @intCast(i);
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
+
         for (0x80..0xC0) |j| {
             const secondOctet: u8 = @intCast(j);
+            @memcpy(buffer[3..6], percentEscapeTable[secondOctet][0..]);
 
-            var buffer: [6]u8 = undefined;
-            const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}%{X:0>2}", .{ firstOctet, secondOctet });
-            if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+            if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
                 defer testing.allocator.free(decoded);
                 const expected = [_]u8{ firstOctet, secondOctet };
                 try testing.expectEqualSlices(u8, expected[0..2], decoded);
@@ -1099,20 +1105,21 @@ test "decodeURIAlloc: it should return the bytes correctly decoded (n=2)" {
 //
 // It should return the decoded character
 test "decodeURIAlloc: it should return the bytes correctly decoded (n=3)" {
+    var buffer: [9]u8 = undefined;
     for (0xE0..0xF0) |i| {
         const firstOctet: u8 = @intCast(i);
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctet][0..]);
         for (0x80..0xC0) |j| {
             const secondOctet: u8 = @intCast(j);
             if (firstOctet == 0xE0 and secondOctet <= 0x9F) continue;
             if (firstOctet == 0xED and 0xA0 <= secondOctet) continue;
+            @memcpy(buffer[3..6], percentEscapeTable[secondOctet][0..]);
 
             for (0x80..0xC0) |k| {
                 const thirdOctet: u8 = @intCast(k);
+                @memcpy(buffer[6..9], percentEscapeTable[thirdOctet][0..]);
 
-                var buffer: [9]u8 = undefined;
-                const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}%{X:0>2}%{X:0>2}", .{ firstOctet, secondOctet, thirdOctet });
-
-                if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+                if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
                     defer testing.allocator.free(decoded);
                     const expected = [_]u8{ firstOctet, secondOctet, thirdOctet };
                     try testing.expectEqualSlices(u8, expected[0..], decoded);
@@ -1128,22 +1135,25 @@ test "decodeURIAlloc: it should return the bytes correctly decoded (n=3)" {
 //
 // It should return the decoded character
 test "decodeURIAlloc: it should return the bytes correctly decoded (n=4)" {
+    var buffer: [12]u8 = undefined;
     for (0xF0..0xF5) |i| {
         const firstOctect: u8 = @intCast(i);
+        @memcpy(buffer[0..3], percentEscapeTable[firstOctect][0..]);
+
         for (0x80..0xC0) |j| {
             const secondOctet: u8 = @intCast(j);
             if (firstOctect == 0xF0 and secondOctet <= 0x9F) continue;
             if (firstOctect == 0xF4 and secondOctet >= 0x90) continue;
+            @memcpy(buffer[3..6], percentEscapeTable[secondOctet][0..]);
 
             for (0x80..0xC0) |k| {
                 const thirdOctet: u8 = @intCast(k);
+                @memcpy(buffer[6..9], percentEscapeTable[thirdOctet][0..]);
                 for (0x80..0xC0) |l| {
                     const fourthOctet: u8 = @intCast(l);
+                    @memcpy(buffer[9..12], percentEscapeTable[fourthOctet][0..]);
 
-                    var buffer: [12]u8 = undefined;
-                    const input = try std.fmt.bufPrint(&buffer, "%{X:0>2}%{X:0>2}%{X:0>2}%{X:0>2}", .{ firstOctect, secondOctet, thirdOctet, fourthOctet });
-
-                    if (decodeURIAlloc(testing.allocator, input)) |decoded| {
+                    if (decodeURIAlloc(testing.allocator, buffer[0..])) |decoded| {
                         defer testing.allocator.free(decoded);
                         const expected = [_]u8{ firstOctect, secondOctet, thirdOctet, fourthOctet };
                         try testing.expectEqualSlices(u8, expected[0..], decoded);
