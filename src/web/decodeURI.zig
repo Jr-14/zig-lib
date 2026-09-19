@@ -1,4 +1,6 @@
 const std = @import("std");
+const percentEscapeTable = @import("root.zig").percentEscapeTable;
+
 
 /// https://tc39.es/ecma262/multipage/global-object.html#sec-parsehexoctet
 /// The original implemenatation returns either a non-negative interger or a non-empty List of SyntaxError. But for our
@@ -91,23 +93,6 @@ fn Decode(writer: *std.Io.Writer, string: []const u8, preserveEscapeSet: fn (u8)
 // Upstream: https://github.com/tc39/test262
 
 const testing = std.testing;
-
-// Precompute and generate the %HH tables at comptime rather than calculating and using the writer at runtime.
-const percentEscapeTable: [256][3]u8 = blk: {
-    const hex = "0123456789ABCDEF";
-    var table: [256][3]u8 = undefined;
-
-    for (0..256) |i| {
-        const byte: u8 = @intCast(i);
-        table[i] = .{
-            '%',
-            hex[byte >> 4],
-            hex[byte & 0x0F],
-        };
-    }
-
-    break :blk table;
-};
 
 // https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A1.10_T1.js
 //
@@ -1513,3 +1498,7 @@ test "decodeURIAlloc: test some url" {
         try testing.expectEqualSlices(u8, input, decoded);
     }
 }
+
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A5.1.js
+//
+// Checking use prop
