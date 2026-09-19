@@ -53,7 +53,7 @@ The tests are covered by the BSD License found [here](https://github.com/tc39/te
 - [x] S15.1.3.1_A3_T1.js
 - [x] S15.1.3.1_A3_T2.js
 - [x] S15.1.3.1_A3_T3.js
-- [ ] S15.1.3.1_A4_T1.js
+- [x] S15.1.3.1_A4_T1.js
 - [ ] S15.1.3.1_A4_T2.js
 - [ ] S15.1.3.1_A4_T3.js
 - [ ] S15.1.3.1_A4_T4.js
