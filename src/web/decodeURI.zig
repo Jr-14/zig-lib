@@ -1476,3 +1476,40 @@ test "decodeURIAlloc: checking url with line terminator" {
         try testing.expectEqualSlices(u8, expected, decoded);
     }
 }
+
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A4_T4.js
+//
+// Test some URL
+test "decodeURIAlloc: test some url" {
+    // Check #1
+    {
+        const input = "";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, input, decoded);
+    }
+
+    // Check #2
+    {
+        const input = "http:%2f%2Funipro.ru";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, input, decoded);
+    }
+
+    // Check #3
+    {
+        const input = "http://www.google.ru/support/jobs/bin/static.py%3Fpage%3dwhy-ru.html%26sid%3Dliveandwork";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, input, decoded);
+    }
+
+    // Check #4
+    {
+        const input = "http://en.wikipedia.org/wiki/UTF-8%23Description";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, input, decoded);
+    }
+}
