@@ -1351,3 +1351,24 @@ test "decodeURIAlloc: preserves the string if it's in the uriReserved plus '#' (
         try testing.expectEqualSlices(u8, input, decoded);
     }
 }
+
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A3_T3.js
+//
+// Preserves the string containing one instance of each character valid in the uri reserved plus '#'
+test "decodeURIAlloc: preserves the string if it's in the uriReserved plus '#' (string)" {
+    // Check #1
+    {
+        const input = "%3B%2F%3F%3A%40%26%3D%2B%24%2C%23";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, input, decoded);
+    }
+
+    // Check #2
+    {
+        const input = "%3b%2f%3f%3a%40%26%3d%2b%24%2c%23";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, input, decoded);
+    }
+}
