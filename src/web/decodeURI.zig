@@ -1435,3 +1435,44 @@ test "decodeURIAlloc: decode the russian alphabet" {
         try testing.expectEqualSlices(u8, expected, decoded);
     }
 }
+
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A4_T3.js
+//
+// Checking URL with Line terminator
+test "decodeURIAlloc: checking url with line terminator" {
+    // Check #1
+    {
+        const input = "http://unipro.ru/%0Aabout";
+        const expected = "http://unipro.ru/\nabout";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, expected, decoded);
+    }
+
+    // Check #2
+    {
+        const input = "http://unipro.ru/%0Babout";
+        const expected = "http://unipro.ru/\x0Babout";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, expected, decoded);
+    }
+
+    // Check #3
+    {
+        const input = "http://unipro.ru/%0Cabout";
+        const expected = "http://unipro.ru/\x0Cabout";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, expected, decoded);
+    }
+
+    // Check #4
+    {
+        const input = "http://unipro.ru/%0Dabout";
+        const expected = "http://unipro.ru/\x0Dabout";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, expected, decoded);
+    }
+}
