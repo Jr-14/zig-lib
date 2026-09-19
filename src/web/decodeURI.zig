@@ -1169,7 +1169,7 @@ test "decodeURIAlloc: it should return the bytes correctly decoded (n=4)" {
 // https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A3_T1.js
 //
 // Preserves the string containing one instance of each character valid in the uri reserved plus '#'
-test "decodeURIAlloc: preserves the string if it's in the uriReserved plus '#'" {
+test "decodeURIAlloc: preserves the string if it's in the uriReserved plus '#' (uppercase)" {
     // Check #1
     {
         const input = "%3B";
@@ -1245,6 +1245,99 @@ test "decodeURIAlloc: preserves the string if it's in the uriReserved plus '#'" 
     // Check #10
     {
         const input = "%2C";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, input, decoded);
+    }
+
+    // Check #11
+    {
+        const input = "%23";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, input, decoded);
+    }
+}
+
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A3_T2.js
+//
+// Preserves the string containing one instance of each character valid in the uri reserved plus '#'
+test "decodeURIAlloc: preserves the string if it's in the uriReserved plus '#' (lowercase)" {
+    // Check #1
+    {
+        const input = "%3b";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, input, decoded);
+    }
+
+    // Check #2
+    {
+        const input = "%2f";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, input, decoded);
+    }
+
+    // Check #3
+    {
+        const input = "%3f";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, input, decoded);
+    }
+
+    // Check #4
+    {
+        const input = "%3a";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, input, decoded);
+    }
+
+    // Check #5
+    {
+        const input = "%40";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, input, decoded);
+    }
+
+    // Check #6
+    {
+        const input = "%26";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, input, decoded);
+    }
+
+    // Check #7
+    {
+        const input = "%3d";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, input, decoded);
+    }
+
+    // Check #8
+    {
+        const input = "%2b";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, input, decoded);
+    }
+
+    // Check #9
+    {
+        const input = "%24";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, input, decoded);
+    }
+
+    // Check #10
+    {
+        const input = "%2c";
         const decoded = try decodeURIAlloc(testing.allocator, input);
         defer testing.allocator.free(decoded);
         try testing.expectEqualSlices(u8, input, decoded);
