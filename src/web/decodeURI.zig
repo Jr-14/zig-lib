@@ -1403,3 +1403,35 @@ test "decodeURIAlloc: decode the english alphabet" {
         try testing.expectEqualSlices(u8, expected, decoded);
     }
 }
+
+// https://github.com/tc39/test262/blob/main/test/built-ins/decodeURI/S15.1.3.1_A4_T2.js
+//
+// Correctly decode the russian alphabet
+test "decodeURIAlloc: decode the russian alphabet" {
+    // Check #1
+    {
+        const input = "http://ru.wikipedia.org/wiki/%d0%ae%D0%bd%D0%B8%D0%BA%D0%BE%D0%B4";
+        const expected = "http://ru.wikipedia.org/wiki/Юникод";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, expected, decoded);
+    }
+
+    // Check #2
+    {
+        const input = "http://ru.wikipedia.org/wiki/%D0%AE%D0%BD%D0%B8%D0%BA%D0%BE%D0%B4#%D0%A1%D1%81%D1%8B%D0%BB%D0%BA%D0%B8";
+        const expected = "http://ru.wikipedia.org/wiki/Юникод#Ссылки";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, expected, decoded);
+    }
+
+    // Check #3
+    {
+        const input = "http://ru.wikipedia.org/wiki/%D0%AE%D0%BD%D0%B8%D0%BA%D0%BE%D0%B4%23%D0%92%D0%B5%D1%80%D1%81%D0%B8%D0%B8%20%D0%AE%D0%BD%D0%B8%D0%BA%D0%BE%D0%B4%D0%B0";
+        const expected = "http://ru.wikipedia.org/wiki/Юникод%23Версии Юникода";
+        const decoded = try decodeURIAlloc(testing.allocator, input);
+        defer testing.allocator.free(decoded);
+        try testing.expectEqualSlices(u8, expected, decoded);
+    }
+}
