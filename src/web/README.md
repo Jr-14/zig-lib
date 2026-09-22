@@ -67,10 +67,10 @@ The tests are covered by the BSD License found [here](https://github.com/tc39/te
 - [x] S15.1.3.1_A6_T1.js - Not applicable
 
 ## encodeURI
-- [x] S15.1.3.3_A1.1_T1.js
-- [ ] S15.1.3.3_A1.1_T2.js
-- [ ] S15.1.3.3_A1.2_T1.js
-- [ ] S15.1.3.3_A1.2_T2.js
+- [x] S15.1.3.3_A1.1_T1.js - Not applicable, these tests UTF-16 surrogate code units
+- [x] S15.1.3.3_A1.1_T2.js - Not applicable, these tests UTF-16 surrogate code units
+- [x] S15.1.3.3_A1.2_T1.js - Not applicable, these tests UTF-16 surrogate code units
+- [x] S15.1.3.3_A1.2_T2.js - Not applicable, these tests UTF-16 surrogate code units
 - [ ] S15.1.3.3_A1.3_T1.js
 - [ ] S15.1.3.3_A2.1_T1.js
 - [ ] S15.1.3.3_A2.2_T1.js
@@ -87,11 +87,11 @@ The tests are covered by the BSD License found [here](https://github.com/tc39/te
 - [ ] S15.1.3.3_A4_T2.js
 - [ ] S15.1.3.3_A4_T3.js
 - [ ] S15.1.3.3_A4_T4.js
-- [ ] S15.1.3.3_A5.1.js
-- [ ] S15.1.3.3_A5.2.js
-- [ ] S15.1.3.3_A5.3.js
-- [ ] S15.1.3.3_A5.4.js
-- [ ] S15.1.3.3_A5.5.js
-- [ ] S15.1.3.3_A5.6.js
-- [ ] S15.1.3.3_A5.7.js
-- [ ] S15.1.3.3_A6_T1.js
+- [x] S15.1.3.3_A5.1.js - Not applicable
+- [x] S15.1.3.3_A5.2.js - Not applicable
+- [x] S15.1.3.3_A5.3.js - Not applicable
+- [x] S15.1.3.3_A5.4.js - Not applicable
+- [x] S15.1.3.3_A5.5.js - Not applicable
+- [x] S15.1.3.3_A5.6.js - Not applicable
+- [x] S15.1.3.3_A5.7.js - Not applicable
+- [x] S15.1.3.3_A6_T1.js - Not applicable
