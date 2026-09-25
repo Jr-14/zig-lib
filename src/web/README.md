@@ -72,21 +72,21 @@ The tests are covered by the BSD License found [here](https://github.com/tc39/te
 - [x] S15.1.3.3_A1.2_T1.js - Not applicable, these tests UTF-16 surrogate code units
 - [x] S15.1.3.3_A1.2_T2.js - Not applicable, these tests UTF-16 surrogate code units
 - [x] S15.1.3.3_A1.3_T1.js - Not applicable, these tests UTF-16 surrogate code units
-- [ ] S15.1.3.3_A2.1_T1.js
-- [ ] S15.1.3.3_A2.2_T1.js
-- [ ] S15.1.3.3_A2.3_T1.js
-- [ ] S15.1.3.3_A2.4_T1.js
-- [ ] S15.1.3.3_A2.4_T2.js
-- [ ] S15.1.3.3_A2.5_T1.js
-- [ ] S15.1.3.3_A3.1_T1.js
-- [ ] S15.1.3.3_A3.2_T1.js
-- [ ] S15.1.3.3_A3.2_T2.js
-- [ ] S15.1.3.3_A3.2_T3.js
-- [ ] S15.1.3.3_A3.3_T1.js
-- [ ] S15.1.3.3_A4_T1.js
-- [ ] S15.1.3.3_A4_T2.js
-- [ ] S15.1.3.3_A4_T3.js
-- [ ] S15.1.3.3_A4_T4.js
+- [x] S15.1.3.3_A2.1_T1.js
+- [x] S15.1.3.3_A2.2_T1.js
+- [x] S15.1.3.3_A2.3_T1.js
+- [x] S15.1.3.3_A2.4_T1.js
+- [x] S15.1.3.3_A2.4_T2.js
+- [x] S15.1.3.3_A2.5_T1.js
+- [x] S15.1.3.3_A3.1_T1.js
+- [x] S15.1.3.3_A3.2_T1.js
+- [x] S15.1.3.3_A3.2_T2.js
+- [x] S15.1.3.3_A3.2_T3.js
+- [x] S15.1.3.3_A3.3_T1.js
+- [x] S15.1.3.3_A4_T1.js
+- [x] S15.1.3.3_A4_T2.js
+- [x] S15.1.3.3_A4_T3.js
+- [x] S15.1.3.3_A4_T4.js
 - [x] S15.1.3.3_A5.1.js - Not applicable
 - [x] S15.1.3.3_A5.2.js - Not applicable
 - [x] S15.1.3.3_A5.3.js - Not applicable

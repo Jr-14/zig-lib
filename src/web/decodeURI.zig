@@ -1,6 +1,5 @@
 const std = @import("std");
-const percentEscapeTable = @import("root.zig").percentEscapeTable;
-
+const percentEscapeTable = @import("utils.zig").percentEscapeTable;
 
 /// https://tc39.es/ecma262/multipage/global-object.html#sec-parsehexoctet
 /// The original implemenatation returns either a non-negative interger or a non-empty List of SyntaxError. But for our
